@@ -372,11 +372,12 @@ class TestECSOperator(unittest.TestCase):
             ['', {'testTagKey': 'testTagValue'}],
         ]
     )
+    @mock.patch.object(ECSOperator, '_xcom_del')
     @mock.patch.object(ECSOperator, '_xcom_set')
     @mock.patch.object(ECSOperator, '_try_reattach_task')
     @mock.patch.object(ECSOperator, '_wait_for_task_ended')
     @mock.patch.object(ECSOperator, '_check_success_task')
-    def test_reattach_prev_task_first_try(self, launch_type, tags, check_mock, wait_mock, reattach_mock, xcom_mock):
+    def test_reattach_prev_task_first_try(self, launch_type, tags, check_mock, wait_mock, reattach_mock, xcom_set_mock, xcom_del_mock):
 
         self.set_up_operator(launch_type=launch_type, tags=tags)  # pylint: disable=no-value-for-parameter
         client_mock = self.aws_hook_mock.return_value.get_conn.return_value
@@ -399,7 +400,7 @@ class TestECSOperator(unittest.TestCase):
             extend_args['tags'] = [{'key': k, 'value': v} for (k, v) in tags.items()]
 
         reattach_mock.called_once()
-        xcom_mock.assert_called_once_with(
+        xcom_set_mock.assert_called_once_with(
             None,
             key="ecs_task_arn",
             task_id="task_task_arn",
@@ -408,6 +409,7 @@ class TestECSOperator(unittest.TestCase):
         client_mock.run_task.assert_called_once()
         wait_mock.assert_called_once_with()
         check_mock.assert_called_once_with()
+        xcom_del_mock.assert_called_once()
         assert self.ecs.arn == 'arn:aws:ecs:us-east-1:012345678910:task/d8c67b3c-ac87-4ffe-a847-4785bc3a8b55'
 
     @mock.patch.object(ECSOperator, '_last_log_message', return_value="Log output")

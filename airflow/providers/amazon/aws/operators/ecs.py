@@ -233,12 +233,15 @@ class ECSOperator(BaseOperator):  # pylint: disable=too-many-instance-attributes
 
         if self.reattach_prev_task:
             # Clear the XCom value storing the ECS task ARN if the task has completed (we can't reattach it anymore)
-            session.query(XCom).filter(XCom.dag_id == self.dag_id, XCom.task_id == f"{self.task_id}_task_arn").delete()
+            self._xcom_del(session, f"{self.task_id}_task_arn")
 
         if self.do_xcom_push:
             return self._last_log_message()
 
         return None
+
+    def _xcom_del(self, session, task_id):
+        session.query(XCom).filter(XCom.dag_id == self.dag_id, XCom.task_id == task_id).delete()
 
     @AwsBaseHook.retry(should_retry)
     def _start_task(self, context):
